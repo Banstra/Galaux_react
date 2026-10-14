@@ -1,7 +1,4 @@
-export type CreateUserParams = {
+export interface IUser  {
+  id: string;
   username: string;
-  login: string;
-  email: string;
-  microsoftId: string;
-  profile_info: string;
-};
+}

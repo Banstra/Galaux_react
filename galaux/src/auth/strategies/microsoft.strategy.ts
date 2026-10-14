@@ -1,30 +1,32 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import {Strategy} from 'passport';
+import { Strategy } from 'passport-microsoft';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
-  constructor() {
-    super();
+  constructor(private configService: ConfigService) {
+    super({
+      // Используем get<string>() и утверждаем тип as string, чтобы удовлетворить TypeScript
+      clientID: configService.get<string>('MICROSOFT_CLIENT_ID') as string,
+      clientSecret: configService.get<string>(
+        'MICROSOFT_CLIENT_SECRET',
+      ) as string,
+      callbackURL: configService.get<string>(
+        'MICROSOFT_CALLBACK_URL',
+      ) as string,
+      scope: ['XboxLive.signin', 'offline_access'],
+    });
   }
 
-  async validate(
-    accessToken: string,
-    refreshToken: string,
-    profile: any,
-    done: Function,
-  ) {
-    // The 'profile' object contains the user info from Microsoft
-    const userPayload = {
-      id: profile.id,
-      displayName: profile.displayName,
-      username: profile.displayName || 'MinecraftPlayer',
+  // В NestJS мы просто возвращаем объект, а фреймворк сам передает его в AuthService
+  async validate(accessToken: string, refreshToken: string, profile: any) {
+    return {
+      microsoftId: profile.id,
+      displayName: profile.displayName || 'MinecraftPlayer',
       emails: profile.emails,
-      accessToken, // Save these so we can store them in the database!
+      accessToken,
       refreshToken,
     };
-
-    // Pass the payload to the AuthService validateMicrosoftUser method
-    return done(null, userPayload);
   }
 }

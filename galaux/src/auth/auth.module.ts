@@ -6,6 +6,8 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import {UsersModule} from '../users/users.module';
 import { MicrosoftStrategy } from './strategies/microsoft.strategy';
+import { LocalStrategy } from './strategies/local.strategy';
+import { JwtStrategy } from './strategies/jwt.strategy';
 
 @Module({
   imports: [
@@ -16,11 +18,11 @@ import { MicrosoftStrategy } from './strategies/microsoft.strategy';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('JWT_SECRET'),
-        signOptions: { expiresIn: '7d' },
+        signOptions: { expiresIn: '30d' },
       }),
     }),
   ],
-  providers: [AuthService, MicrosoftStrategy],
+  providers: [AuthService, MicrosoftStrategy, LocalStrategy, JwtStrategy],
   controllers: [AuthController],
 })
 export class AuthModule {}

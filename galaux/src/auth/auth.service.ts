@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import {UserService} from '../users/service/user/user.service';
-import { CreateUserParams } from '../utils/types';
+import { UserService } from '../users/service/user/user.service';
+import { IUser } from '../utils/types';
+import * as argon2 from 'argon2';
 
 @Injectable()
 export class AuthService {
@@ -10,49 +11,21 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async validateMicrosoftUser(profile: any) {
-    const microsoftId = profile.id;
+  async validateUser(username: string, password: string): Promise<any> {
+    const user = await this.usersService.findOne(username);
 
-    // 1. Check if user exists
-    let user = await this.usersService.findByMicrosoftId(microsoftId);
-
-    // 2. If not, create them using your new Type
-    if (!user) {
-      const email =
-        profile.emails?.[0]?.value || `${microsoftId}@placeholder.local`;
-
-      const createParams: CreateUserParams = {
-        username: profile.displayName || 'MinecraftPlayer',
-        login: email, // Using email as the login identifier
-        email: email,
-        microsoftId: microsoftId,
-        profile_info: 'New Minecraft Player', // Default bio
-      };
-
-      user = await this.usersService.createUser(createParams);
+    if (user) {
+      const passwordMatch = await argon2.verify(user.password, password);
+      if (passwordMatch) return user;
+      else throw new BadRequestException('Password is incorrect');
     }
-
-    // 3. Update their tokens so the launcher can use them later
-    if (profile.accessToken && profile.refreshToken) {
-      await this.usersService.updateTokens(
-        microsoftId,
-        profile.accessToken,
-        profile.refreshToken,
-      );
-    }
-
-    return user;
+    throw new BadRequestException('User not found');
   }
 
-  async login(user: any) {
-    const payload = { sub: user.id, microsoftId: user.microsoftId };
+  async login(user: IUser) {
+    const {id, username} = user
     return {
-      access_token: this.jwtService.sign(payload),
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      },
+      id, username, access_token: this.jwtService.sign({id: user.id, username: user.username})
     };
   }
 }
