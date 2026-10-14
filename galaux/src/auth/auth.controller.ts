@@ -6,11 +6,13 @@ import {
   Res,
   Post,
   Body,
+  Req,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { MicrosoftAuthGuard } from './guards/microsoft.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -34,5 +36,21 @@ export class AuthController {
   @Get('profile')
   getProfile(@Request() req: any) {
     return req.user;
+  }
+
+  @Get()
+  @UseGuards(MicrosoftAuthGuard)
+  async microsoftAuth() {
+    // Initiates the Microsoft OAuth2 login flow redirection
+  }
+
+  @Get('callback')
+  @UseGuards(MicrosoftAuthGuard)
+  async microsoftAuthRedirect(@Req() req: any, @Res() res: any) {
+    const user = req.user;
+    return res.json({
+      message: 'User successfully authenticated/registered',
+      user,
+    });
   }
 }

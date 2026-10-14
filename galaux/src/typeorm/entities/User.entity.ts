@@ -7,6 +7,7 @@ import {
   JoinTable,
   ManyToMany,
   ManyToOne,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
@@ -14,6 +15,11 @@ import {
 import { RoleEntity } from './Role.entity';
 import { ServerEntity } from './Server.entity';
 import { ProductEntity } from './Product.entity';
+import { PostEntity } from './Post.entity';
+import { CommentEntity } from './Comment.entity';
+import { LikeEntity } from './Like.entity';
+import { FriendshipEntity } from './Friendship.entity';
+import { MessageEntity } from './Message.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -26,11 +32,14 @@ export class UserEntity {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, nullable: true })
   microsoftId: string;
 
   @Column({ unique: true })
   username: string;
+
+  @Column({ nullable: true })
+  displayName: string;
 
   @Column({ nullable: true })
   password: string;
@@ -64,20 +73,16 @@ export class UserEntity {
   @JoinColumn()
   role: RoleEntity;
 
-  @ManyToOne(() => ServerEntity, (server) => server.creators, {
+  @ManyToMany(() => ServerEntity, (server) => server.creators, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn()
   server: ServerEntity;
 
-  @ManyToMany(
-    () => ServerEntity,
-    (followed_server) => followed_server.members
-  )
+  @ManyToMany(() => ServerEntity, (followed_server) => followed_server.members)
   @JoinTable({
     name: 'followed_servers',
-    joinColumn: {name: 'user_id'},
-    inverseJoinColumn: {name: 'server_id'}
+    joinColumn: { name: 'user_id' },
+    inverseJoinColumn: { name: 'server_id' },
   })
   followed_server: ServerEntity[];
 
@@ -95,5 +100,26 @@ export class UserEntity {
   money: number;
 
   @ManyToMany(() => ProductEntity, (product) => product.buyer)
-  product: ProductEntity[]
+  product: ProductEntity[];
+
+  @OneToMany(() => PostEntity, (post) => post.author)
+  posts: PostEntity[];
+
+  @OneToMany(() => CommentEntity, (comment) => comment.author)
+  comments: CommentEntity[];
+
+  @OneToMany(() => LikeEntity, (like) => like.user)
+  likes: LikeEntity[];
+
+  @OneToMany(() => FriendshipEntity, (friendship) => friendship.requester)
+  sentFriendRequests: FriendshipEntity[];
+
+  @OneToMany(() => FriendshipEntity, (friendship) => friendship.addressee)
+  receivedFriendRequests: FriendshipEntity[];
+
+  @OneToMany(() => MessageEntity, (message) => message.sender)
+  sentMessages: MessageEntity[];
+
+  @OneToMany(() => MessageEntity, (message) => message.receiver)
+  receivedMessages: MessageEntity[];
 }

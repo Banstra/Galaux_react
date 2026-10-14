@@ -11,7 +11,7 @@ export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
-    private readonly jwtService: JwtService
+    private readonly jwtService: JwtService,
   ) {}
 
   async createUser(createUserDto: CreateUserDto) {
@@ -27,12 +27,38 @@ export class UserService {
       username: createUserDto.username,
     });
 
-    const token = this.jwtService.sign({username: createUserDto.username})
+    const token = this.jwtService.sign({ username: createUserDto.username });
 
     return { newUser, token };
   }
 
   async findOne(username: string): Promise<UserEntity | null> {
     return await this.userRepository.findOne({ where: { username } });
+  }
+
+  async findOrCreate(profile: Partial<UserEntity>): Promise<UserEntity> {
+    // 1. Check if user already exists by Microsoft ID
+    let user = await this.userRepository.findOne({
+      where: { microsoftId: profile.microsoftId },
+    });
+
+    if (!user) {
+      // 2. Fallback check: Does a local user exist with the same email address?
+      user = await this.userRepository.findOne({
+        where: { email: profile.email },
+      });
+
+      if (user) {
+        // Link Microsoft profile to existing local account
+        user.microsoftId = profile.microsoftId!;
+        await this.userRepository.save(user);
+      } else {
+        // 3. Register a completely new user
+        user = this.userRepository.create(profile);
+        await this.userRepository.save(user);
+      }
+    }
+
+    return user;
   }
 }
