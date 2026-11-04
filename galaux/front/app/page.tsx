@@ -1,32 +1,27 @@
-// // В React/Electron компоненте
-// import * as msmc from 'msmc';
-//
-// async function loginWithMicrosoft() {
-//   // Инициализация flow (для Electron используется 'electron' или 'popup')
-//   const flow = msmc.quickLogin('react');
-//
-//   try {
-//     const result = await flow();
-//
-//     if (result.type === 'Success') {
-//       const mcToken = result.minecraft_token;
-//       const mcProfile = result.profile; // { id: 'uuid', name: 'Steve' }
-//
-//       // Отправляем токен на твой NestJS бэкенд
-//       const response = await fetch('http://localhost:3000/auth/microsoft', {
-//         method: 'POST',
-//         headers: { 'Content-Type': 'application/json' },
-//         body: JSON.stringify({
-//           accessToken: mcToken,
-//           uuid: mcProfile.id,
-//           username: mcProfile.name,
-//         }),
-//       });
-//
-//       const galauxSession = await response.json();
-//       // Сохраняем galauxSession.token в localStorage/БД лаунчера
-//     }
-//   } catch (error) {
-//     console.error('Ошибка входа', error);
-//   }
-// }
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Landing',
+  description: 'Test landing',
+};
+export default function Page() {
+  return (
+    <>
+      <section>
+        <div className="hero bg-base-200 min-h-screen">
+          <div className="hero-content text-center">
+            <div className="max-w-md">
+              <h1 className="text-5xl font-bold">Hello there</h1>
+              <p className="py-6">
+                Provident cupiditate voluptatem et in. Quaerat fugiat ut
+                assumenda excepturi exercitationem quasi. In deleniti eaque aut
+                repudiandae et a id nisi.
+              </p>
+              <button className="btn btn-primary">Get Started</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}

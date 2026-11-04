@@ -38,19 +38,24 @@ export class AuthController {
     return req.user;
   }
 
-  @Get()
+  @Get('microsoft')
   @UseGuards(MicrosoftAuthGuard)
   async microsoftAuth() {
-    // Initiates the Microsoft OAuth2 login flow redirection
   }
 
-  @Get('callback')
+  @Get('microsoft/callback')
   @UseGuards(MicrosoftAuthGuard)
   async microsoftAuthRedirect(@Req() req: any, @Res() res: any) {
     const user = req.user;
-    return res.json({
-      message: 'User successfully authenticated/registered',
-      user,
-    });
+
+    const payload = {
+      id: user.id,
+      username: user.username,
+      microsoftId: user.microsoftId,
+    };
+    const access_token = this.authService['jwtService'].sign(payload);
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return res.redirect(`${frontendUrl}/auth/callback?token=${access_token}`);
   }
 }

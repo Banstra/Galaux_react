@@ -35,7 +35,7 @@ export class UserEntity {
   @Column({ unique: true, nullable: true })
   microsoftId: string;
 
-  @Column({ unique: true })
+  @Column()
   username: string;
 
   @Column({ nullable: true })

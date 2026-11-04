@@ -36,29 +36,33 @@ export class UserService {
     return await this.userRepository.findOne({ where: { username } });
   }
 
-  async findOrCreate(profile: Partial<UserEntity>): Promise<UserEntity> {
-    // 1. Check if user already exists by Microsoft ID
+  async findOrCreate(profile: any): Promise<UserEntity> {
     let user = await this.userRepository.findOne({
       where: { microsoftId: profile.microsoftId },
     });
 
     if (!user) {
-      // 2. Fallback check: Does a local user exist with the same email address?
       user = await this.userRepository.findOne({
         where: { email: profile.email },
       });
 
       if (user) {
-        // Link Microsoft profile to existing local account
-        user.microsoftId = profile.microsoftId!;
+        user.microsoftId = profile.microsoftId;
+        if (!user.username) {
+          user.username = profile.displayName || profile.email.split('@')[0];
+        }
         await this.userRepository.save(user);
       } else {
-        // 3. Register a completely new user
-        user = this.userRepository.create(profile);
+        user = this.userRepository.create({
+          microsoftId: profile.microsoftId,
+          email: profile.email,
+          username: profile.displayName || profile.email.split('@')[0],
+          offline: false,
+          money: 0.0,
+        });
         await this.userRepository.save(user);
       }
     }
-
     return user;
   }
 }
