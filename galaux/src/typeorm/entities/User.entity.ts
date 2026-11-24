@@ -12,6 +12,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { Exclude } from 'class-transformer';
+
 import { RoleEntity } from './Role.entity';
 import { ServerEntity } from './Server.entity';
 import { ProductEntity } from './Product.entity';
@@ -41,6 +43,7 @@ export class UserEntity {
   @Column({ nullable: true })
   displayName: string;
 
+  @Exclude()
   @Column({ nullable: true })
   password: string;
 
@@ -63,9 +66,11 @@ export class UserEntity {
   @Column({ default: true })
   offline: boolean;
 
+  @Exclude()
   @Column({ nullable: true })
-  accessToken: string; // For Microsoft/Minecraft launcher tokens later
+  accessToken: string;
 
+  @Exclude()
   @Column({ nullable: true })
   refreshToken: string;
 
@@ -86,9 +91,8 @@ export class UserEntity {
   })
   followed_server: ServerEntity[];
 
-  // Добавь это поле в класс UserEntity
   @Column({ unique: true, nullable: true })
-  minecraftUuid: string; // UUID, который выдает Mojang (или сгенерированный для оффлайн)
+  minecraftUuid: string;
 
   @Column({ unique: true, nullable: true })
   telegram_link: string;

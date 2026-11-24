@@ -8,40 +8,58 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MicrosoftAuthGuard } from './guards/microsoft.guard';
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+import { LoginResponseDto } from './dto/LoginResponseDto.dto';
+import { UserResponseDto } from './dto/UserResponseDto.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string', example: 'testUser123' },
+        password: { type: 'string', example: 'mySecretPassword123' }
+      }
+    }
+  })
+  @ApiOkResponse({ type: LoginResponseDto })
   async login(@Request() req: any) {
     return this.authService.login(req.user);
   }
 
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post('logout')
-  async logout(@Request() req: any) {
-    await new Promise<void>((resolve, reject) =>
-      req.logout((err: any) => (err ? reject(err) : resolve())),
-    );
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: { message: { type: 'string', example: 'Logged out successfully' } }
+    }
+  })
+  async logout() {
+    return { message: 'Logged out successfully' };
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Get('profile')
+  @ApiOkResponse({ type: UserResponseDto })
   getProfile(@Request() req: any) {
-    return req.user;
+    return this.authService.getProfile(req.user);
   }
 
   @Get('microsoft')
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftAuth() {
-  }
+  async microsoftAuth() { }
 
   @Get('microsoft/callback')
   @UseGuards(MicrosoftAuthGuard)
