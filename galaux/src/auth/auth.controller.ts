@@ -8,14 +8,13 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MicrosoftAuthGuard } from './guards/microsoft.guard';
-import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-
-
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+import { LoginResponseDto } from './dto/LoginResponseDto.dto';
+import { UserResponseDto } from './dto/UserResponseDto.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -27,11 +26,12 @@ export class AuthController {
     schema: {
       type: 'object',
       properties: {
-        username: { type: 'string' },
-        password: { type: 'string' }
+        username: { type: 'string', example: 'testUser123' },
+        password: { type: 'string', example: 'mySecretPassword123' }
       }
     }
   })
+  @ApiOkResponse({ type: LoginResponseDto })
   async login(@Request() req: any) {
     return this.authService.login(req.user);
   }
@@ -39,25 +39,27 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Post('logout')
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: { message: { type: 'string', example: 'Logged out successfully' } }
+    }
+  })
   async logout() {
-    // Для JWT-аутентификации этот эндпоинт не требует очистки сессии на сервере (её нет).
-    // Реальный выход происходит на клиенте: фронтенд удаляет токен из localStorage/cookie.
-    // Убрала req.logout() и LocalAuthGuard, так как они предназначены для сессионной аутентификации
-    // и вызывали ошибки "Login sessions require session support".
     return { message: 'Logged out successfully' };
   }
 
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
   @Get('profile')
+  @ApiOkResponse({ type: UserResponseDto })
   getProfile(@Request() req: any) {
-    return req.user;
+    return this.authService.getProfile(req.user);
   }
 
   @Get('microsoft')
   @UseGuards(MicrosoftAuthGuard)
-  async microsoftAuth() {
-  }
+  async microsoftAuth() { }
 
   @Get('microsoft/callback')
   @UseGuards(MicrosoftAuthGuard)
