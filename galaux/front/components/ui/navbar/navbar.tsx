@@ -1,51 +1,104 @@
-import Image from 'next/image';
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/lib/store/useAuthStore';
+import { fetchAPI } from '@/lib/api';
+
+const NAV = [
+  { label: 'Поддержка', href: '/#support' },
+  { label: 'Лаунчер', href: '/#launcher' },
+  { label: 'Цены', href: '/pricing' },
+];
 
 export function Navbar() {
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const router = useRouter();
+
+  const [isMounted] = useState(() => typeof window !== 'undefined');
+
+  async function signOut() {
+    try {
+      await fetchAPI('/auth/logout', { method: 'POST' });
+    } catch {}
+    logout();
+    router.push('/');
+  }
+
+  // Единый блок рендера: на сервере всегда "не авторизован", на клиенте — реальное состояние
   return (
-    <div className="navbar bg-base-100 shadow-sm">
-      <div className="navbar-start">
-        <div className="dropdown">
-          <ul
-            tabIndex={-1}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
+    <header className="sticky top-0 z-50">
+      <div className="glass border-x-0 border-t-0">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+          <Link
+            href="/"
+            className="font-display text-2xl tracking-wider text-ice"
           >
-            <li>
-              <a>Лаунчер</a>
-            </li>
-            <li>
-              <a>Техподдержка</a>
-            </li>
-            <li>
-              <a>Контакты</a>
-            </li>
-          </ul>
+            GALAUX
+          </Link>
+
+          <nav className="hidden gap-8 text-sm text-slate-300 md:flex">
+            {NAV.map((l) => (
+              <Link
+                key={l.label}
+                href={l.href}
+                className="transition hover:text-neon"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </nav>
+
+          {/*
+            Ключевой момент: пока !isMounted (сервер), мы рендерим ТОЧНО тот же HTML,
+            который был бы при отсутствии пользователя.
+            Как только компонент оживает на клиенте, Zustand уже содержит данные из localStorage,
+            и UI мгновенно переключается на авторизованный вид БЕЗ ошибки гидратации.
+          */}
+          {!isMounted ? (
+            <div className="flex items-center gap-3">
+              <Link href="/auth/login" className="btn-neon !px-4 !py-2 text-sm">
+                Войти
+              </Link>
+              <Link
+                href="/auth/register"
+                className="btn-neon !px-4 !py-2 text-sm"
+              >
+                Регистрация
+              </Link>
+            </div>
+          ) : user ? (
+            <div className="flex items-center gap-3">
+              <Link href="/profile" className="btn-neon !px-4 !py-2 text-sm">
+                Профиль
+              </Link>
+              <button
+                onClick={signOut}
+                className="btn-ghost !px-4 !py-2 text-sm"
+              >
+                Выйти
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link
+                href="/auth/login"
+                className="btn-ghost !px-4 !py-2 text-sm"
+              >
+                Войти
+              </Link>
+              <Link
+                href="/auth/register"
+                className="btn-neon !px-4 !py-2 text-sm"
+              >
+                Регистрация
+              </Link>
+            </div>
+          )}
         </div>
-        <a className="btn btn-ghost text-xl">
-          <Image
-            src={'/logo.svg'}
-            alt={'logo'}
-            width={100}
-            height={100}
-            loading={'eager'}
-          ></Image>
-        </a>
       </div>
-      <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal px-1">
-          <li>
-            <a>Лаунчер</a>
-          </li>
-          <li>
-            <a>Техподдержка</a>
-          </li>
-          <li>
-            <a>Контакты</a>
-          </li>
-        </ul>
-      </div>
-      <div className="navbar-end">
-        <a className="btn" href={'/auth/login'}>Войти</a>
-      </div>
-    </div>
+    </header>
   );
 }
