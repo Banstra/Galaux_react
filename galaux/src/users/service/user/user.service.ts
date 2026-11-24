@@ -12,7 +12,7 @@ export class UserService {
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   async createUser(createUserDto: CreateUserDto) {
     const existUser = await this.userRepository.findOne({
@@ -27,7 +27,8 @@ export class UserService {
       username: createUserDto.username,
     });
 
-    const token = this.jwtService.sign({ username: createUserDto.username });
+    // При регистрации также нужно записывать в токен id созданного только что юзера
+    const token = this.jwtService.sign({ id: newUser.id, username: createUserDto.username });
 
     return { newUser, token };
   }
