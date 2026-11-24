@@ -18,7 +18,33 @@ export class FriendshipService {
     private friendshipRepo: Repository<FriendshipEntity>,
     @InjectRepository(UserEntity)
     private userRepo: Repository<UserEntity>,
-  ) {}
+  ) { }
+
+  async deleteFriend(userId: number, friendId: number) {
+    if (userId === friendId) {
+      throw new BadRequestException('You cannot delete yourself from friends list');
+    }
+
+    const existing = await this.friendshipRepo.findOne({
+      where: [
+        { requester: { id: userId }, addressee: { id: friendId } },
+        { requester: { id: friendId }, addressee: { id: userId } },
+      ],
+    });
+
+    if (!existing) {
+      throw new NotFoundException('Friendship not found');
+    }
+
+    if (existing.status !== FriendshipStatus.ACCEPTED) {
+      throw new BadRequestException('You are not friends yet');
+    }
+
+
+    await this.friendshipRepo.remove(existing);
+
+    return { message: 'Friend deleted successfully' };
+  }
 
   async sendRequest(requesterId: number, addresseeId: number) {
     if (requesterId === addresseeId) {

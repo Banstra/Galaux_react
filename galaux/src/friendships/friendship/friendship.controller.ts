@@ -9,6 +9,7 @@ import {
   Get,
   BadRequestException,
   UnauthorizedException,
+  Delete,
 } from '@nestjs/common';
 import { FriendshipService } from './friendship.service';
 import {
@@ -53,6 +54,20 @@ export class FriendshipController {
       dto.status,
     );
   }
+
+  @Delete(':friendId')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  async deleteFriend(
+    @Request() req: any,
+    @Param('friendId') friendId: string,
+  ) {
+    return this.friendshipsService.deleteFriend(
+      req.user.id,
+      Number(friendId)
+    );
+  }
+
 
   @Get('my-friends')
   @UseGuards(JwtAuthGuard)
