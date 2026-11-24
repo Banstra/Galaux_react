@@ -13,26 +13,42 @@ import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { MicrosoftAuthGuard } from './guards/microsoft.guard';
+import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+
+
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        username: { type: 'string' },
+        password: { type: 'string' }
+      }
+    }
+  })
   async login(@Request() req: any) {
     return this.authService.login(req.user);
   }
 
-  @UseGuards(LocalAuthGuard)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Post('logout')
-  async logout(@Request() req: any) {
-    await new Promise<void>((resolve, reject) =>
-      req.logout((err: any) => (err ? reject(err) : resolve())),
-    );
+  async logout() {
+    // Для JWT-аутентификации этот эндпоинт не требует очистки сессии на сервере (её нет).
+    // Реальный выход происходит на клиенте: фронтенд удаляет токен из localStorage/cookie.
+    // Убрала req.logout() и LocalAuthGuard, так как они предназначены для сессионной аутентификации
+    // и вызывали ошибки "Login sessions require session support".
+    return { message: 'Logged out successfully' };
   }
 
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
   @Get('profile')
   getProfile(@Request() req: any) {
     return req.user;
