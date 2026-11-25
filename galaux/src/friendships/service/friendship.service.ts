@@ -64,12 +64,21 @@ export class FriendshipService {
       );
     }
 
-    const requester = await this.userRepo.findOneOrFail({
+    const requester = await this.userRepo.findOne({
       where: { id: requesterId },
     });
-    const addressee = await this.userRepo.findOneOrFail({
+
+    if (!requester) {
+      throw new NotFoundException(`Requester with ID ${requesterId} not found`);
+    }
+
+    const addressee = await this.userRepo.findOne({
       where: { id: addresseeId },
     });
+
+    if (!addressee) {
+      throw new NotFoundException(`Addressee with ID ${addresseeId} not found`);
+    }
 
     const friendship = this.friendshipRepo.create({
       requester,
