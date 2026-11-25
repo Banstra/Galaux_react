@@ -8,9 +8,10 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RoleEntity } from './typeorm/entities/Role.entity';
-import { MessageController } from './message/message.controller';
+import { MessageController } from './message/controller/message.controller';
 import { MessageModule } from './message/message.module';
-import { FriendshipModule } from './friendships/friendship/friendship.module';
+import { FriendshipModule } from './friendships/friendship.module';
+import { PostModule } from './posts/post.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -34,9 +35,10 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UsersModule,
     AuthModule,
     MessageModule,
-    FriendshipModule
+    FriendshipModule,
+    PostModule
   ],
-  controllers: [AppController, MessageController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }

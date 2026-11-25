@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { UserController } from './controller/user/user.controller';
-import { UserService } from './service/user/user.service';
+import { UserController } from './controller/user.controller';
+import { UserService } from './service/user.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from '../typeorm/entities/User.entity';
 import { JwtModule } from '@nestjs/jwt';
@@ -22,4 +22,4 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
   providers: [UserService],
   exports: [UserService],
 })
-export class UsersModule {}
+export class UsersModule { }

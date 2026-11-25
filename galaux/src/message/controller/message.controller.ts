@@ -8,9 +8,9 @@ import {
   Request,
   UseGuards,
 } from '@nestjs/common';
-import { MessageService } from './message.service';
-import { CreateMessageDto } from './CreateMessage.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { MessageService } from '../service/message.service';
+import { CreateMessageDto } from '../dto/CreateMessage.dto';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody, ApiProperty } from '@nestjs/swagger';
 
 

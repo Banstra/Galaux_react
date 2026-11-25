@@ -11,11 +11,11 @@ import {
   UnauthorizedException,
   Delete,
 } from '@nestjs/common';
-import { FriendshipService } from './friendship.service';
+import { FriendshipService } from '../service/friendship.service';
 import {
   FriendshipActionDto,
   UpdateFriendshipDto,
-} from './FriendshipAction.dto';
+} from '../dto/FriendshipAction.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 @Controller('friendship')
