@@ -1,17 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import {
-  Heart,
-  MessageCircle,
   Send,
-  Share2,
-  ImageOff,
   Loader2,
 } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import PostCard from '@/app/_components/PostCard';
+import { Friend } from '@/app/profile/page';
 
 type Post = {
   id: number;
@@ -37,6 +34,11 @@ export default function FeedPage() {
   const [draft, setDraft] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    id: number;
+    type: 'friend' | 'post';
+  } | null>(null);
+  const [friends, setFriends] = useState<Friend[]>([]);
 
   // Защита от гидратации
   const [isMounted, setIsMounted] = useState(false);
@@ -77,24 +79,30 @@ export default function FeedPage() {
   }
 
   async function toggleLike(postId: number) {
-    // Оптимистичное обновление
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) }
-          : p,
+    setPosts((ps) =>
+      ps.map((x) =>
+        x.id === postId
+          ? {
+              ...x,
+              liked: !x.liked,
+              likes: (x.likes ?? 0) + (x.liked ? -1 : 1),
+            }
+          : x,
       ),
     );
-
     try {
       await fetchAPI(`/post/${postId}/like`, { method: 'POST' });
     } catch {
       // Откат при ошибке
-      setPosts((prev) =>
-        prev.map((p) =>
-          p.id === postId
-            ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? 1 : -1) }
-            : p,
+      setPosts((ps) =>
+        ps.map((x) =>
+          x.id === postId
+            ? {
+                ...x,
+                liked: !x.liked,
+                likes: (x.likes ?? 0) + (x.liked ? 1 : -1),
+              }
+            : x,
         ),
       );
     }
@@ -102,9 +110,26 @@ export default function FeedPage() {
 
   if (!isMounted || !token) return null;
 
-  return (
-    <main className="relative min-h-dvh pb-20">
+  async function executeDelete() {
+    if (!confirmDelete) return;
 
+    try {
+      if (confirmDelete.type === 'friend') {
+        await fetchAPI(`/friendship/${confirmDelete.id}`, { method: 'DELETE' });
+        setFriends((prev) => prev.filter((f) => f.id !== confirmDelete.id));
+      } else if (confirmDelete.type === 'post') {
+        await fetchAPI(`/post/${confirmDelete.id}`, { method: 'DELETE' });
+        setPosts((prev) => prev.filter((p) => p.id !== confirmDelete.id));
+      }
+    } catch (err) {
+      console.error('Ошибка удаления:', err);
+    } finally {
+      setConfirmDelete(null);
+    }
+  }
+
+  return (
+    <div className="relative min-h-dvh pb-20">
       <div className="mx-auto max-w-2xl px-4 pt-8">
         {/* Композер */}
         <div className="glass rounded-2xl p-5 mb-8">
@@ -145,74 +170,19 @@ export default function FeedPage() {
         ) : (
           <div className="space-y-6">
             {posts.map((post) => (
-              <article
+              <PostCard
                 key={post.id}
-                className="glass card-hover rounded-2xl p-6 transition-all"
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <Link
-                    href={`/profile/${post.author.id}`}
-                    className="flex items-center gap-3 group"
-                  >
-                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-grape/40 to-neon/40 flex items-center justify-center font-display text-white text-lg group-hover:scale-105 transition-transform">
-                      {(post.author.displayName ||
-                        post.author.username)[0]?.toUpperCase()}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-slate-100 group-hover:text-neon transition-colors">
-                        {post.author.displayName || post.author.username}
-                      </div>
-                      <div className="text-xs text-slate-500">
-                        @{post.author.username} • {timeAgo(post.created_at)}
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-
-                <p className="text-slate-200 whitespace-pre-wrap mb-4 leading-relaxed">
-                  {post.content}
-                </p>
-
-                {post.image_url ? (
-                  <div className="rounded-xl overflow-hidden border border-white/10 mb-4">
-                    <img
-                      src={post.image_url}
-                      alt=""
-                      className="w-full h-auto object-cover max-h-96"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-32 rounded-xl border border-dashed border-white/10 flex items-center justify-center text-slate-600 mb-4 bg-white/[0.02]">
-                    <ImageOff size={24} className="mr-2" /> Нет медиа
-                  </div>
-                )}
-
-                <div className="flex items-center gap-6 pt-4 border-t border-white/5 text-sm text-slate-400">
-                  <button
-                    onClick={() => toggleLike(post.id)}
-                    className={`flex items-center gap-2 transition ${post.liked ? 'text-coral' : 'hover:text-coral'}`}
-                  >
-                    <Heart
-                      size={18}
-                      fill={post.liked ? 'currentColor' : 'none'}
-                    />
-                    <span>{post.likes}</span>
-                  </button>
-
-                  <button className="flex items-center gap-2 hover:text-ice transition">
-                    <MessageCircle size={18} />
-                    <span>{post.comments}</span>
-                  </button>
-
-                  <button className="ml-auto hover:text-neon transition">
-                    <Share2 size={18} />
-                  </button>
-                </div>
-              </article>
+                post={post}
+                currentUser={user}
+                onLike={toggleLike}
+                onDelete={(postId) =>
+                  setConfirmDelete({ id: postId, type: 'post' })
+                }
+              />
             ))}
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

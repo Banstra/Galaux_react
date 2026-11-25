@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { UserPlus, Users, MessageCircle, Globe, ShieldCheck } from 'lucide-react';
-import SiteHeader from '../../_components/SiteHeader';
+import { Users, Globe, ShieldCheck, Loader2 } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 
@@ -16,10 +15,7 @@ type Profile = {
   discord_link?: string | null;
   offline?: boolean;
   role?: { name?: string } | null;
-  money?: number;
 };
-
-type FriendshipStatus = 'none' | 'pending' | 'friends' | 'incoming';
 
 export default function PublicProfilePage() {
   const params = useParams();
@@ -27,90 +23,78 @@ export default function PublicProfilePage() {
   const id = Number(params.id);
 
   const currentUser = useAuthStore((s) => s.user);
-  const [isMounted, setIsMounted] = useState(false);
+  const token = useAuthStore((s) => s.token);
+  const isHydrated = useAuthStore((s) => s.isHydrated);
+  const hydrate = useAuthStore((s) => s.hydrate);
 
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [friendshipStatus, setFriendshipStatus] = useState<FriendshipStatus>('none');
   const [loading, setLoading] = useState(true);
 
+  // 1. Безопасная гидратация
   useEffect(() => {
-    setIsMounted(true);
-    if (!currentUser?.id || isNaN(id)) return;
+    hydrate();
+  }, [hydrate]);
 
-    // Если смотрим свой профиль - редиректим на /profile
-    if (currentUser.id === id) {
+  // 2. Загрузка данных только ПОСЛЕ гидратации
+  useEffect(() => {
+    if (!isHydrated) return; // Ждем, пока Zustand прочитает localStorage
+
+    if (!token) {
+      router.replace('/auth/login');
+      return;
+    }
+
+    // Если пользователь смотрит свой профиль, редиректим на главную страницу профиля
+    if (currentUser && currentUser.id === id) {
       router.replace('/profile');
       return;
     }
 
-    Promise.all([
-      fetchAPI(`/user/${id}`).catch(() => null), // TODO: добавить эндпоинт GET /user/:id
-      // fetchAPI(`/friendship/status/${id}`).catch(() => 'none') // TODO: добавить проверку статуса
-    ]).then(([userData]) => {
-      setProfile(userData);
-      setLoading(false);
-    });
-  }, [id, currentUser, router]);
-
-  async function sendFriendRequest() {
-    try {
-      await fetchAPI('/friendship/request', {
-        method: 'POST',
-        body: JSON.stringify({ addressee_id: id }),
+    setLoading(true);
+    fetchAPI(`/user/${id}`)
+      .then((userData) => {
+        setProfile(userData);
+      })
+      .catch(() => {
+        setProfile(null);
+      })
+      .finally(() => {
+        setLoading(false);
       });
-      setFriendshipStatus('pending');
-    } catch (err) {
-      console.error(err);
-    }
-  }
-  async function removeFriend() {
-    if (
-      !confirm('Вы уверены, что хотите удалить этого пользователя из друзей?')
-    )
-      return;
+  }, [id, currentUser, token, isHydrated, router]);
 
-    try {
-      await fetchAPI(`/friendship/${id}`, { method: 'DELETE' }); // Уточните эндпоинт у коллеги
-      setFriendshipStatus('none');
-    } catch (err) {
-      console.error('Ошибка при удалении друга:', err);
-    }
-  }
-
-  if (!isMounted || !currentUser) return null;
-
-  if (loading) {
+  // 3. Показываем лоадер, пока не поняли, авторизован ли пользователь
+  if (!isHydrated || loading) {
     return (
       <main className="min-h-dvh flex items-center justify-center">
-        <div className="animate-spin text-neon"><ShieldCheck size={40} /></div>
+        <Loader2 size={40} className="text-neon animate-spin" />
       </main>
     );
   }
 
+  // 4. Если эндпоинт вернул 404 или пользователь не найден
   if (!profile) {
     return (
-      <main className="min-h-dvh flex items-center justify-center text-slate-400">
-        Пользователь не найден или скрыл свой профиль.
+      <main className="min-h-dvh flex flex-col items-center justify-center text-slate-400 gap-4">
+        <ShieldCheck size={48} className="text-slate-600" />
+        <p>Пользователь не найден или скрыл свой профиль.</p>
       </main>
     );
   }
 
   const displayName = profile.displayName || profile.username;
-  const isMe = currentUser.id === profile.id;
 
   return (
     <main className="relative min-h-dvh">
-      <SiteHeader />
-
       {/* Обложка */}
       <section className="relative h-48 md:h-64 bg-gradient-to-r from-deep via-abyss to-void border-b border-white/10">
         <div className="absolute inset-0 bg-grid opacity-50" />
         <div className="absolute inset-0 bg-gradient-to-t from-void to-transparent" />
       </section>
 
+      {/* Контент профиля */}
       <section className="mx-auto max-w-4xl px-6 -mt-20 relative z-10">
         <div className="flex flex-col sm:flex-row items-end gap-6">
-          {/* Аватар */}
           <div className="relative shrink-0">
             <div className="h-32 w-32 rounded-2xl border-4 border-void bg-gradient-to-br from-grape/60 to-neon/40 flex items-center justify-center font-display text-5xl text-white shadow-[0_0_40px_rgba(139,92,246,.4)]">
               {displayName[0]?.toUpperCase()}
@@ -121,7 +105,6 @@ export default function PublicProfilePage() {
             />
           </div>
 
-          {/* Инфо */}
           <div className="flex-1 pb-2">
             <h1 className="font-display text-4xl text-white tracking-wide">
               {displayName}
@@ -162,42 +145,9 @@ export default function PublicProfilePage() {
               )}
             </div>
           </div>
-
-          {/* Действия (только для чужих профилей) */}
-          {!isMe && (
-            <div className="flex gap-3 pb-4">
-              {friendshipStatus === 'friends' ? (
-                <>
-                  <button
-                    onClick={removeFriend}
-                    className="btn-ghost !px-6 !py-3 border-coral/30 text-coral hover:bg-coral/10"
-                  >
-                    Удалить из друзей
-                  </button>
-                  <button className="btn-ghost !px-4 !py-3">
-                    <MessageCircle size={18} />
-                  </button>
-                </>
-              ) : friendshipStatus === 'pending' ? (
-                <button
-                  disabled
-                  className="btn-ghost !px-6 !py-3 opacity-50 cursor-not-allowed"
-                >
-                  Заявка отправлена
-                </button>
-              ) : (
-                <button
-                  onClick={sendFriendRequest}
-                  className="btn-neon !px-6 !py-3"
-                >
-                  <UserPlus size={18} /> Добавить в друзья
-                </button>
-              )}
-            </div>
-          )}
         </div>
 
-        {/* Статистика */}
+        {/* Статистика (заглушка, пока нет эндпоинта статистики) */}
         <div className="mt-8 flex gap-8 border-b border-white/10 pb-6 text-sm text-slate-400">
           <span>
             <b className="text-ice text-lg">0</b> подписчиков
@@ -210,7 +160,7 @@ export default function PublicProfilePage() {
           </span>
         </div>
 
-        {/* Контент профиля (заглушка) */}
+        {/* Пустая лента постов пользователя */}
         <div className="py-10 text-center text-slate-500 glass rounded-2xl mt-8 p-12">
           <Users size={48} className="mx-auto mb-4 opacity-20" />
           <p>Пользователь пока не опубликовал никаких постов.</p>
