@@ -1,15 +1,16 @@
 import { Module } from '@nestjs/common';
 import { createObserveModule } from '@nestjs/observe';
-import {TypeOrmModule} from '@nestjs/typeorm';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UserEntity } from './typeorm/entities/User.entity';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
-import {ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RoleEntity } from './typeorm/entities/Role.entity';
 import { MessageController } from './message/message.controller';
 import { MessageModule } from './message/message.module';
+import { FriendshipModule } from './friendships/friendship/friendship.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -33,8 +34,9 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     UsersModule,
     AuthModule,
     MessageModule,
+    FriendshipModule
   ],
   controllers: [AppController, MessageController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
