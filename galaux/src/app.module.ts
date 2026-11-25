@@ -12,6 +12,7 @@ import { MessageController } from './message/controller/message.controller';
 import { MessageModule } from './message/message.module';
 import { FriendshipModule } from './friendships/friendship.module';
 import { PostModule } from './posts/post.module';
+import { CommentModule } from './comments/comment.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -36,7 +37,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
     AuthModule,
     MessageModule,
     FriendshipModule,
-    PostModule
+    PostModule,
+    CommentModule
   ],
   controllers: [AppController],
   providers: [AppService],
