@@ -12,9 +12,10 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from '../dto/CreateUser.dto';
 import { UserService } from '../service/user.service';
-import { ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiQuery } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { UpdateUserDto } from '../dto/UpdateUse.dto';
+import { UserResponseDto } from '../../auth/dto/UserResponse.dto';
 
 @Controller('user')
 export class UserController {
@@ -52,6 +53,7 @@ export class UserController {
 
   @Get('search')
   @ApiQuery({ name: 'q', required: true, description: 'Поисковый запрос по нику', example: 'test' })
+  @ApiOkResponse({ type: [UserResponseDto] })
   async search(@Query('q') query: string) {
     return this.userService.searchByUsername(query);
   }

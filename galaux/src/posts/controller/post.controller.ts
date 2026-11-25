@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { PostResponseDto } from '../dto/PostResponse.dto';
 import { UpdatePostDto } from '../dto/UpdatePost.dto';
+import { LikeResponseDto } from '../dto/LikeResponse.dto';
 
 
 @Controller('post')
@@ -34,6 +35,7 @@ export class PostController {
   @Get()
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiOkResponse({ type: [PostResponseDto] })
   async getFeed(
     @Query('page') page = 1,
     @Query('limit') limit = 20
@@ -44,6 +46,7 @@ export class PostController {
   @Post(':id/like')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
+  @ApiOkResponse({ type: LikeResponseDto })
   async toggleLike(@Request() req: any, @Param('id') postId: string) {
     return this.postsService.toggleLike(req.user.id, Number(postId));
   }

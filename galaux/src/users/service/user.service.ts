@@ -87,7 +87,8 @@ export class UserService {
   }
 
   async searchByUsername(query: string) {
-    if (!query || query.trim().length === 0) {
+    if (!query || query.trim().length === 0 || query.length > 50) {
+      return [];
     }
 
     return this.userRepository.find({

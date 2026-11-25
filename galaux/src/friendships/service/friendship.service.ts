@@ -104,8 +104,7 @@ export class FriendshipService {
     return this.friendshipRepo.save(friendship);
   }
 
-  async getFriends(userId: number) {
-    // Get all accepted friendships where the user is either requester or addressee
+  async getFriends(userId: number, page = 1, limit = 20) {
     const friendships = await this.friendshipRepo
       .createQueryBuilder('friendship')
       .innerJoinAndSelect('friendship.requester', 'requester')
@@ -114,9 +113,10 @@ export class FriendshipService {
         status: FriendshipStatus.ACCEPTED,
       })
       .andWhere('requester.id = :userId OR addressee.id = :userId', { userId })
+      .skip((page - 1) * limit)
+      .take(limit)
       .getMany();
 
-    // Map to return just the "other" user's details
     return friendships.map((f) =>
       f.requester.id === userId ? f.addressee : f.requester,
     );

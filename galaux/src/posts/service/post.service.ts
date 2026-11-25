@@ -51,6 +51,9 @@ export class PostService {
   }
 
   async toggleLike(userId: number, postId: number) {
+    const post = await this.postRepo.findOne({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
     const existingLike = await this.likeRepo.findOne({
       where: { user: { id: userId }, post: { id: postId } },
     });
