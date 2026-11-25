@@ -1,10 +1,11 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserEntity } from '../../../typeorm/entities/User.entity';
-import { Repository } from 'typeorm';
-import { CreateUserDto } from '../../dto/CreateUser.dto';
+import { UserEntity } from '../../typeorm/entities/User.entity';
+import { ILike, Repository } from 'typeorm';
+import { CreateUserDto } from '../dto/CreateUser.dto';
 import * as argon2 from 'argon2'
 import { JwtService } from '@nestjs/jwt';
+import { UpdateUserDto } from '../dto/UpdateUse.dto';
 
 @Injectable()
 export class UserService {
@@ -65,5 +66,36 @@ export class UserService {
       }
     }
     return user;
+  }
+  async updateProfile(userId: number, updateUserDto: UpdateUserDto) {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    Object.assign(user, updateUserDto);
+
+    return this.userRepository.save(user);
+  }
+
+  async findAll(page = 1, limit = 20) {
+    const [users, total] = await this.userRepository.findAndCount({
+      skip: (page - 1) * limit,
+      take: limit,
+      order: { created_at: 'DESC' },
+    });
+
+    return { data: users, total, page, limit };
+  }
+
+  async searchByUsername(query: string) {
+    if (!query || query.trim().length === 0 || query.length > 50) {
+      return [];
+    }
+
+    return this.userRepository.find({
+      where: {
+        username: ILike(`%${query}%`),
+      },
+      take: 10,
+    });
   }
 }

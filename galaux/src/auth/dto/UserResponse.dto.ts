@@ -1,9 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Exclude, Expose, Type } from 'class-transformer';
 import { RoleEntity } from '../../typeorm/entities/Role.entity';
-// Импортируйте другие сущности, если планируете их отдавать (Server, Post и т.д.)
 
-@Exclude() // Скрываем всё, что не помечено @Expose()
+@Exclude()
 export class UserResponseDto {
     @Expose()
     @ApiProperty({ description: 'ID пользователя', example: 1 })
@@ -21,7 +20,6 @@ export class UserResponseDto {
     @ApiProperty({ description: 'Отображаемое имя', example: null, required: false })
     displayName: string;
 
-    // 👇 ПОЛЕ PASSWORD ОТСУТСТВУЕТ ЗДЕСЬ, ПОЭТОМУ ОНО БУДЕТ УДАЛЕНО
 
     @Expose()
     @ApiProperty({ description: 'Email', example: 'test@example.com' })
@@ -46,8 +44,6 @@ export class UserResponseDto {
     @Expose()
     @ApiProperty({ description: 'Оффлайн статус', example: true })
     offline: boolean;
-
-    // 👇 ACCESS TOKEN И REFRESH TOKEN ОТСУТСТВУЮТ ЗДЕСЬ
 
     @Expose()
     @ApiProperty({ description: 'UUID Minecraft', example: null, required: false })

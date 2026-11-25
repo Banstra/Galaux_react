@@ -4,8 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MessageEntity } from '../typeorm/entities/Message.entity';
 import { UserEntity } from '../typeorm/entities/User.entity';
 
-import { MessageService } from './message.service';
-import { MessageController } from './message.controller';
+import { MessageService } from '../message/service/message.service';
+import { MessageController } from './controller/message.controller';
 
 @Module({
   imports: [
@@ -16,4 +16,4 @@ import { MessageController } from './message.controller';
   controllers: [MessageController],
   exports: [MessageService],
 })
-export class MessageModule {}
+export class MessageModule { }

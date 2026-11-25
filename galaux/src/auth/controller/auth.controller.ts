@@ -8,13 +8,13 @@ import {
   Body,
   Req,
 } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { MicrosoftAuthGuard } from './guards/microsoft.guard';
+import { AuthService } from '../service/auth.service';
+import { LocalAuthGuard } from '../guards/local-auth.guard';
+import { JwtAuthGuard } from '../guards/jwt-auth.guard';
+import { MicrosoftAuthGuard } from '../guards/microsoft.guard';
 import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiProperty } from '@nestjs/swagger';
-import { LoginResponseDto } from './dto/LoginResponseDto.dto';
-import { UserResponseDto } from './dto/UserResponseDto.dto';
+import { LoginResponseDto } from '../dto/LoginResponse.dto';
+import { UserResponseDto } from '../dto/UserResponse.dto';
 
 @Controller('auth')
 export class AuthController {
