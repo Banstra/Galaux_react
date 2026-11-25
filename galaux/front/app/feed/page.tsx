@@ -7,19 +7,8 @@ import {
 } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import PostCard from '@/app/_components/PostCard';
+import PostCard, { Post } from '@/app/_components/PostCard';
 import { Friend } from '@/app/profile/page';
-
-type Post = {
-  id: number;
-  content: string;
-  image_url?: string | null;
-  likes: number;
-  comments: number;
-  liked: boolean;
-  author: { id: number; username: string; displayName?: string | null };
-  created_at: string;
-};
 
 function timeAgo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
@@ -39,6 +28,7 @@ export default function FeedPage() {
     type: 'friend' | 'post';
   } | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [likingPosts, setLikingPosts] = useState<Set<number>>(new Set());
 
   // Защита от гидратации
   const [isMounted, setIsMounted] = useState(false);
@@ -79,6 +69,11 @@ export default function FeedPage() {
   }
 
   async function toggleLike(postId: number) {
+    if (likingPosts.has(postId)) return; // Игнорируем повторные клики
+
+    setLikingPosts((prev) => new Set(prev).add(postId));
+
+    // Оптимистичное обновление
     setPosts((ps) =>
       ps.map((x) =>
         x.id === postId
@@ -90,10 +85,11 @@ export default function FeedPage() {
           : x,
       ),
     );
+
     try {
       await fetchAPI(`/post/${postId}/like`, { method: 'POST' });
     } catch {
-      // Откат при ошибке
+      // Откат при ошибке сети
       setPosts((ps) =>
         ps.map((x) =>
           x.id === postId
@@ -105,8 +101,15 @@ export default function FeedPage() {
             : x,
         ),
       );
+    } finally {
+      setLikingPosts((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
     }
   }
+
 
   if (!isMounted || !token) return null;
 
@@ -175,6 +178,7 @@ export default function FeedPage() {
                 post={post}
                 currentUser={user}
                 onLike={toggleLike}
+                isLiking={likingPosts.has(post.id)} // <-- Добавьте эту строку
                 onDelete={(postId) =>
                   setConfirmDelete({ id: postId, type: 'post' })
                 }

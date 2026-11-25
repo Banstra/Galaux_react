@@ -43,10 +43,8 @@ type SearchResultUser = {
 const DEMO_POSTS: Post[] = [
   {
     id: 999,
-    content:
-      'Добро пожаловать в Galaux! Это демо-пост, пока вы не создали свои собственные.',
+    content: 'Добро пожаловать в Galaux! Это демо-пост, пока вы не создали свои собственные.',
     likes: 42,
-    comments: 0,
     liked: false,
     author: { id: 0, username: 'GalauxSystem' },
     created_at: new Date().toISOString(),
@@ -77,6 +75,7 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState('');
   const [publishing, setPublishing] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [likingPosts, setLikingPosts] = useState<Set<number>>(new Set());
 
   // 1. Гидратация при монтировании
   useEffect(() => {
@@ -98,12 +97,10 @@ export default function ProfilePage() {
 
         const postsRes = await fetchAPI('/post?page=1&limit=20');
         const items: Post[] = Array.isArray(postsRes)
-          ? postsRes
-          : (postsRes.items ?? postsRes.posts ?? []);
+            ? postsRes
+            : (postsRes.items ?? postsRes.posts ?? []);
 
-        const mine = items.filter(
-          (p) => !p.author?.id || p.author.id === profileData.id,
-        );
+        const mine = items.filter((p) => !p.author?.id || p.author.id === profileData.id);
         setPosts(mine.length ? mine : DEMO_POSTS);
 
         const friendsRes = await fetchAPI('/friendship/my-friends');
@@ -143,6 +140,49 @@ export default function ProfilePage() {
     return () => clearTimeout(timer);
   }, [searchQuery, profile?.id]);
 
+  async function toggleLike(postId: number) {
+    if (likingPosts.has(postId)) return; // Игнорируем повторные клики
+
+    setLikingPosts((prev) => new Set(prev).add(postId));
+
+    // Оптимистичное обновление
+    setPosts((ps) =>
+      ps.map((x) =>
+        x.id === postId
+          ? {
+              ...x,
+              liked: !x.liked,
+              likes: (x.likes ?? 0) + (x.liked ? -1 : 1),
+            }
+          : x,
+      ),
+    );
+
+    try {
+      await fetchAPI(`/post/${postId}/like`, { method: 'POST' });
+    } catch {
+      // Откат при ошибке сети
+      setPosts((ps) =>
+        ps.map((x) =>
+          x.id === postId
+            ? {
+                ...x,
+                liked: !x.liked,
+                likes: (x.likes ?? 0) + (x.liked ? 1 : -1),
+              }
+            : x,
+        ),
+      );
+    } finally {
+      setLikingPosts((prev) => {
+        const next = new Set(prev);
+        next.delete(postId);
+        return next;
+      });
+    }
+  }
+
+
   async function addFriend(targetId: number) {
     try {
       await fetchAPI(`/friendship/request/${targetId}`, { method: 'POST' });
@@ -180,10 +220,7 @@ export default function ProfilePage() {
         method: 'POST',
         body: JSON.stringify({ content: draft }),
       });
-      setPosts((ps) => [
-        { ...created, likes: 0, comments: 0, liked: false },
-        ...ps,
-      ]);
+      setPosts((ps) => [{ ...created, likes: 0, comments: 0, liked: false }, ...ps]);
       setDraft('');
     } catch (err) {
       console.error('Ошибка публикации:', err);
@@ -193,11 +230,9 @@ export default function ProfilePage() {
   }
 
   const username = profile?.displayName || profile?.username || 'GALAUX';
-  const nf = new Intl.NumberFormat('ru-RU', {
-    notation: 'compact',
-    compactDisplay: 'short',
-  });
+  const nf = new Intl.NumberFormat('ru-RU', { notation: 'compact', compactDisplay: 'short' });
 
+  /* ---------- РЕНДЕР ---------- */
   return (
     <div className="relative min-h-dvh">
       {/* ===== Обложка ===== */}
@@ -334,6 +369,7 @@ export default function ProfilePage() {
                 post={post}
                 currentUser={user}
                 onLike={toggleLike}
+                isLiking={likingPosts.has(post.id)} // <-- Добавьте эту строку
                 onDelete={(postId) =>
                   setConfirmDelete({ id: postId, type: 'post' })
                 }
@@ -513,10 +549,10 @@ export default function ProfilePage() {
 
 /* ---------- модалка редактирования ---------- */
 function EditModal({
-  profile,
-  onClose,
-  onSave,
-}: {
+                     profile,
+                     onClose,
+                     onSave,
+                   }: {
   profile: Profile | null;
   onClose: () => void;
   onSave: (p: Partial<Profile>) => void;
@@ -531,10 +567,7 @@ function EditModal({
 
   async function save() {
     try {
-      await fetchAPI('/user/profile', {
-        method: 'PATCH',
-        body: JSON.stringify(form),
-      });
+      await fetchAPI('/user/profile', { method: 'PATCH', body: JSON.stringify(form) });
     } catch {
       setNote('Изменения сохранены локально — проверьте эндпоинт на бэкенде.');
     }
@@ -543,71 +576,59 @@ function EditModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
-      <div className="glass w-full max-w-md rounded-2xl p-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h2 className="font-display text-xl tracking-wide text-white">
-            Редактировать профиль
-          </h2>
-          <button onClick={onClose} className="text-slate-500 hover:text-coral">
-            <X size={20} />
-          </button>
-        </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm">
+        <div className="glass w-full max-w-md rounded-2xl p-8">
+          <div className="mb-6 flex items-center justify-between">
+            <h2 className="font-display text-xl tracking-wide text-white">Редактировать профиль</h2>
+            <button onClick={onClose} className="text-slate-500 hover:text-coral">
+              <X size={20} />
+            </button>
+          </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="label">Отображаемое имя</label>
-            <input
-              className="field"
-              value={form.displayName}
-              onChange={(e) =>
-                setForm({ ...form, displayName: e.target.value })
-              }
-              placeholder={profile?.username}
-            />
-          </div>
-          <div>
-            <label className="label">О себе</label>
-            <textarea
-              className="field resize-none"
-              rows={3}
-              value={form.profile_info}
-              onChange={(e) =>
-                setForm({ ...form, profile_info: e.target.value })
-              }
-              placeholder="Пара слов о вас и ваших проектах"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
             <div>
-              <label className="label">Telegram</label>
+              <label className="label">Отображаемое имя</label>
               <input
-                className="field"
-                value={form.telegram_link}
-                onChange={(e) =>
-                  setForm({ ...form, telegram_link: e.target.value })
-                }
-                placeholder="@nickname"
+                  className="field"
+                  value={form.displayName}
+                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  placeholder={profile?.username}
               />
             </div>
             <div>
-              <label className="label">Discord</label>
-              <input
-                className="field"
-                value={form.discord_link}
-                onChange={(e) =>
-                  setForm({ ...form, discord_link: e.target.value })
-                }
-                placeholder="discord.gg/…"
+              <label className="label">О себе</label>
+              <textarea
+                  className="field resize-none"
+                  rows={3}
+                  value={form.profile_info}
+                  onChange={(e) => setForm({ ...form, profile_info: e.target.value })}
+                  placeholder="Пара слов о вас и ваших проектах"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Telegram</label>
+                <input
+                    className="field"
+                    value={form.telegram_link}
+                    onChange={(e) => setForm({ ...form, telegram_link: e.target.value })}
+                    placeholder="@nickname"
+                />
+              </div>
+              <div>
+                <label className="label">Discord</label>
+                <input
+                    className="field"
+                    value={form.discord_link}
+                    onChange={(e) => setForm({ ...form, discord_link: e.target.value })}
+                    placeholder="discord.gg/…"
+                />
+              </div>
+            </div>
+            {note && <p className="text-xs text-coral">{note}</p>}
+            <button onClick={save} className="btn-neon w-full">Сохранить</button>
           </div>
-          {note && <p className="text-xs text-coral">{note}</p>}
-          <button onClick={save} className="btn-neon w-full">
-            Сохранить
-          </button>
         </div>
       </div>
-    </div>
   );
 }

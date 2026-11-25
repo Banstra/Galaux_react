@@ -2,11 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Users, Globe, ShieldCheck, Loader2 } from 'lucide-react';
+import {
+  Users,
+  Globe,
+  ShieldCheck,
+  Loader2,
+  UserPlus,
+  MessageCircle,
+} from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
 
-type Profile = {
+type UserProfile = {
   id: number;
   username: string;
   displayName?: string | null;
@@ -23,26 +30,23 @@ export default function PublicProfilePage() {
   const id = Number(params.id);
 
   const currentUser = useAuthStore((s) => s.user);
-  const token = useAuthStore((s) => s.token);
   const isHydrated = useAuthStore((s) => s.isHydrated);
   const hydrate = useAuthStore((s) => s.hydrate);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [friendStatus, setFriendStatus] = useState<
+    'none' | 'pending' | 'friends'
+  >('none');
 
-  // 1. Безопасная гидратация
+  // 1. Гидратация
   useEffect(() => {
     hydrate();
   }, [hydrate]);
 
-  // 2. Загрузка данных только ПОСЛЕ гидратации
+  // 2. Загрузка данных профиля и проверка дружбы
   useEffect(() => {
-    if (!isHydrated) return; // Ждем, пока Zustand прочитает localStorage
-
-    if (!token) {
-      router.replace('/auth/login');
-      return;
-    }
+    if (!isHydrated) return;
 
     // Если пользователь смотрит свой профиль, редиректим на главную страницу профиля
     if (currentUser && currentUser.id === id) {
@@ -50,32 +54,61 @@ export default function PublicProfilePage() {
       return;
     }
 
-    setLoading(true);
-    fetchAPI(`/user/${id}`)
-      .then((userData) => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Загружаем профиль пользователя
+        const userData = await fetchAPI(`/user/${id}`);
         setProfile(userData);
-      })
-      .catch(() => {
-        setProfile(null);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [id, currentUser, token, isHydrated, router]);
 
-  // 3. Показываем лоадер, пока не поняли, авторизован ли пользователь
+        // Проверяем, есть ли пользователь уже в списке друзей
+        try {
+          const friendsData = await fetchAPI('/friendship/my-friends');
+          const isFriend =
+            Array.isArray(friendsData) &&
+            friendsData.some((f: any) => f.id === id);
+          if (isFriend) {
+            setFriendStatus('friends');
+          }
+        } catch {
+          // Если не удалось получить список друзей, считаем, что не друзья
+          setFriendStatus('none');
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки профиля:', err);
+        setProfile(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id, currentUser, isHydrated, router]);
+
+  // 3. Отправка заявки в друзья
+  async function sendFriendRequest() {
+    try {
+      await fetchAPI(`/friendship/request/${id}`, { method: 'POST' });
+      setFriendStatus('pending');
+      alert('Заявка в друзья отправлена!');
+    } catch (err) {
+      console.error('Ошибка отправки заявки:', err);
+      alert('Не удалось отправить заявку. Возможно, вы уже отправили её.');
+    }
+  }
+
+  // 4. Состояния загрузки и ошибки
   if (!isHydrated || loading) {
     return (
-      <main className="min-h-dvh flex items-center justify-center">
+      <main className="min-h-dvh flex items-center justify-center bg-void">
         <Loader2 size={40} className="text-neon animate-spin" />
       </main>
     );
   }
 
-  // 4. Если эндпоинт вернул 404 или пользователь не найден
   if (!profile) {
     return (
-      <main className="min-h-dvh flex flex-col items-center justify-center text-slate-400 gap-4">
+      <main className="min-h-dvh flex flex-col items-center justify-center text-slate-400 gap-4 bg-void">
         <ShieldCheck size={48} className="text-slate-600" />
         <p>Пользователь не найден или скрыл свой профиль.</p>
       </main>
@@ -84,19 +117,22 @@ export default function PublicProfilePage() {
 
   const displayName = profile.displayName || profile.username;
 
+  // 5. Рендер публичного профиля
   return (
-    <main className="relative min-h-dvh">
+    <div className="relative min-h-dvh bg-void">
+
       {/* Обложка */}
-      <section className="relative h-48 md:h-64 bg-gradient-to-r from-deep via-abyss to-void border-b border-white/10">
+      <section className="relative h-48 md:h-64 bg-linear-to-r from-deep via-abyss to-void border-b border-white/10">
         <div className="absolute inset-0 bg-grid opacity-50" />
-        <div className="absolute inset-0 bg-gradient-to-t from-void to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-void to-transparent" />
       </section>
 
       {/* Контент профиля */}
       <section className="mx-auto max-w-4xl px-6 -mt-20 relative z-10">
         <div className="flex flex-col sm:flex-row items-end gap-6">
+          {/* Аватар */}
           <div className="relative shrink-0">
-            <div className="h-32 w-32 rounded-2xl border-4 border-void bg-gradient-to-br from-grape/60 to-neon/40 flex items-center justify-center font-display text-5xl text-white shadow-[0_0_40px_rgba(139,92,246,.4)]">
+            <div className="h-32 w-32 rounded-2xl border-4 border-void bg-linear-to-br from-grape/60 to-neon/40 flex items-center justify-center font-display text-5xl text-white shadow-[0_0_40px_rgba(139,92,246,.4)]">
               {displayName[0]?.toUpperCase()}
             </div>
             <div
@@ -105,6 +141,7 @@ export default function PublicProfilePage() {
             />
           </div>
 
+          {/* Инфо */}
           <div className="flex-1 pb-2">
             <h1 className="font-display text-4xl text-white tracking-wide">
               {displayName}
@@ -145,9 +182,40 @@ export default function PublicProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Кнопки действий (только для чужих профилей) */}
+          <div className="flex gap-3 pb-4">
+            {friendStatus === 'none' && (
+              <button
+                onClick={sendFriendRequest}
+                className="btn-neon !px-6 !py-3"
+              >
+                <UserPlus size={18} /> Добавить в друзья
+              </button>
+            )}
+            {friendStatus === 'pending' && (
+              <button
+                disabled
+                className="btn-ghost !px-6 !py-3 opacity-50 cursor-not-allowed"
+              >
+                Заявка отправлена
+              </button>
+            )}
+            {friendStatus === 'friends' && (
+              <button className="btn-ghost !px-6 !py-3 border-emerald-500/30 text-emerald-400">
+                <Users size={18} /> В друзьях
+              </button>
+            )}
+            <button
+              className="btn-ghost !px-4 !py-3"
+              title="Написать сообщение"
+            >
+              <MessageCircle size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Статистика (заглушка, пока нет эндпоинта статистики) */}
+        {/* Статистика (заглушка, пока нет отдельного эндпоинта статистики) */}
         <div className="mt-8 flex gap-8 border-b border-white/10 pb-6 text-sm text-slate-400">
           <span>
             <b className="text-ice text-lg">0</b> подписчиков
@@ -160,12 +228,15 @@ export default function PublicProfilePage() {
           </span>
         </div>
 
-        {/* Пустая лента постов пользователя */}
+        {/* Лента постов пользователя (заглушка) */}
         <div className="py-10 text-center text-slate-500 glass rounded-2xl mt-8 p-12">
           <Users size={48} className="mx-auto mb-4 opacity-20" />
           <p>Пользователь пока не опубликовал никаких постов.</p>
+          <p className="text-xs mt-2">
+            (Здесь будет интеграция с GET /post?authorId={id})
+          </p>
         </div>
       </section>
-    </main>
+    </div>
   );
 }

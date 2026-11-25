@@ -33,11 +33,14 @@ export default function CommentSection({
       setLoading(true);
       fetchAPI(`/comment/post/${postId}`)
         .then((data) => {
-          // Бэкенд может вернуть массив или объект { data: [...] }
-          const list = Array.isArray(data) ? data : data.data || [];
+          const list = Array.isArray(data) ? data : (data.data || []);
           setComments(list);
         })
-        .catch(console.error)
+        .catch((err) => {
+          // Мягкий фолбэк: если пост не найден (демо) или эндпоинт ещё не готов, просто показываем пустоту
+          console.warn('Не удалось загрузить комментарии:', err);
+          setComments([]);
+        })
         .finally(() => setLoading(false));
     }
   }, [isOpen, postId, comments.length]);

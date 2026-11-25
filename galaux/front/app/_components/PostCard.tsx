@@ -9,6 +9,7 @@ import {
   Trash2,
   Pencil,
   ImageOff,
+  Loader2,
 } from 'lucide-react';
 import CommentSection from './CommentSection';
 
@@ -17,17 +18,18 @@ export type Post = {
   content: string;
   image_url?: string | null;
   likes?: number;
-  comments?: number;
+  comments_count?: number;
   liked?: boolean;
   author: { id: number; username: string; displayName?: string | null };
   created_at: string;
 };
 
-export type PostCardProps = {
+type PostCardProps = {
   post: Post;
   currentUser: { id: number } | null;
   onLike: (postId: number) => void;
   onDelete?: (postId: number) => void;
+  isLiking?: boolean;
 };
 
 function timeAgo(iso: string) {
@@ -43,11 +45,13 @@ export default function PostCard({
   currentUser,
   onLike,
   onDelete,
+  isLiking
 }: PostCardProps) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState(post.content);
   const isOwner = currentUser?.id === post.author.id;
   const displayName = post.author.displayName || post.author.username;
+  const [likingPosts, setLikingPosts] = useState<Set<number>>(new Set());
 
   return (
     <article className="glass card-hover rounded-2xl p-6 transition-all">
@@ -147,14 +151,21 @@ export default function PostCard({
       <div className="mt-4 flex items-center gap-6 border-t border-white/5 pt-4 text-sm text-slate-400">
         <button
           onClick={() => onLike(post.id)}
-          className={`flex items-center gap-2 transition ${post.liked ? 'text-coral' : 'hover:text-coral'}`}
+          disabled={isLiking}
+          className={`flex items-center gap-2 transition ${
+            post.liked ? 'text-coral' : 'hover:text-coral'
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
-          <Heart size={16} fill={post.liked ? 'currentColor' : 'none'} />
+          {isLiking ? (
+            <Loader2 size={16} className="animate-spin" />
+          ) : (
+            <Heart size={16} fill={post.liked ? 'currentColor' : 'none'} />
+          )}
           <span>{post.likes ?? 0}</span>
         </button>
 
         <span className="flex items-center gap-2">
-          <MessageCircle size={16} /> {post.comments ?? 0}
+          <MessageCircle size={16} /> {post.comments_count ?? 0}
         </span>
 
         <button className="ml-auto transition hover:text-neon">
@@ -163,7 +174,10 @@ export default function PostCard({
       </div>
 
       {/* Встроенная секция комментариев */}
-      <CommentSection postId={post.id} initialCount={post.comments ?? 0} />
+      <CommentSection
+        postId={post.id}
+        initialCount={post.comments_count ?? 0}
+      />
     </article>
   );
 }
