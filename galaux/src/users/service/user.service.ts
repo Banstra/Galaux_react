@@ -7,13 +7,14 @@ import * as argon2 from 'argon2'
 import { JwtService } from '@nestjs/jwt';
 import { UpdateUserDto } from '../dto/UpdateUse.dto';
 
+
 @Injectable()
 export class UserService {
   constructor(
     @InjectRepository(UserEntity)
     private userRepository: Repository<UserEntity>,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   async createUser(createUserDto: CreateUserDto) {
     const existUser = await this.userRepository.findOne({
@@ -29,7 +30,10 @@ export class UserService {
     });
 
     // При регистрации также нужно записывать в токен id созданного только что юзера
-    const token = this.jwtService.sign({ id: newUser.id, username: createUserDto.username });
+    const token = this.jwtService.sign({
+      id: newUser.id,
+      username: createUserDto.username,
+    });
 
     return { newUser, token };
   }
@@ -86,6 +90,14 @@ export class UserService {
     return { data: users, total, page, limit };
   }
 
+  async findById(id: number) {
+    const user = await this.userRepository.findOne({ where: { id } });
+    if (!user) throw new NotFoundException('Пользователь не найден');
+
+    // Безопасно возвращаем данные, исключая пароль
+    const { password, ...result } = user;
+    return result;
+  }
   async searchByUsername(query: string) {
     if (!query || query.trim().length === 0 || query.length > 50) {
       return [];

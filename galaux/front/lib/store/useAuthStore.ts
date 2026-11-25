@@ -1,32 +1,53 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  microsoftId?: string;
-}
+const KEY = 'galaux-auth';
 
-interface AuthState {
-  user: User | null;
+type User = { id: number; username: string } | null;
+
+type AuthState = {
+  user: User;
   token: string | null;
-  isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
+  isHydrated: boolean; // ← Новый флаг
+  setAuth: (
+    payload: { id?: number; username?: string },
+    token: string,
+    remember?: boolean,
+  ) => void;
   logout: () => void;
-}
+  hydrate: () => void; // ← Метод для безопасной загрузки
+};
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      user: null,
-      token: null,
-      isAuthenticated: false,
-      setAuth: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
-    }),
-    {
-      name: 'galaux-auth-storage', // Ключ в localStorage
-    },
-  ),
-);
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  isHydrated: false,
+
+  hydrate: () => {
+    if (typeof window === 'undefined') return;
+    const raw = localStorage.getItem(KEY) ?? sessionStorage.getItem(KEY);
+    if (!raw) {
+      set({ isHydrated: true });
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw);
+      set({ user: parsed.user, token: parsed.token, isHydrated: true });
+    } catch {
+      set({ isHydrated: true });
+    }
+  },
+
+  setAuth: (payload, token, remember = true) => {
+    const user = { id: payload.id ?? 0, username: payload.username ?? '' };
+    const data = JSON.stringify({ user, token });
+    (remember ? localStorage : sessionStorage).setItem(KEY, data);
+    (remember ? sessionStorage : localStorage).removeItem(KEY);
+    set({ user, token, isHydrated: true });
+  },
+
+  logout: () => {
+    localStorage.removeItem(KEY);
+    sessionStorage.removeItem(KEY);
+    set({ user: null, token: null, isHydrated: true });
+  },
+}));
