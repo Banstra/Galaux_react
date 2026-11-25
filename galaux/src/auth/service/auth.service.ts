@@ -1,10 +1,10 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from '../users/service/user/user.service';
-import { IUser } from '../utils/types';
+import { UserService } from '../../users/service/user.service';
+import { IUser } from '../../utils/types';
 import * as argon2 from 'argon2';
 import { plainToInstance } from 'class-transformer';
-import { UserResponseDto } from './dto/UserResponseDto.dto';
+import { UserResponseDto } from '../dto/UserResponse.dto';
 
 @Injectable()
 export class AuthService {

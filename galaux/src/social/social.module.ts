@@ -10,14 +10,14 @@ import { MessageEntity } from '../typeorm/entities/Message.entity';
 import { UserEntity } from '../typeorm/entities/User.entity';
 
 // Services
-import {PostService } from '../posts/post/post.service';
-import { FriendshipService } from '../friendships/friendship/friendship.service';
-import { MessageService } from '../message/message.service';
+import { PostService } from '../posts/service/post.service';
+import { FriendshipService } from '../friendships/service/friendship.service';
+import { MessageService } from '../message/service/message.service';
 
 // Controllers
-import { PostController } from '../posts/post/post.controller';
-import { FriendshipController } from '../friendships/friendship/friendship.controller';
-import { MessageController } from '../message/message.controller';
+import { PostController } from '../posts/controller/post.controller';
+import { FriendshipController } from '../friendships/controller/friendship.controller';
+import { MessageController } from '../message/controller/message.controller';
 
 @Module({
   imports: [
@@ -34,4 +34,4 @@ import { MessageController } from '../message/message.controller';
   controllers: [PostController, FriendshipController, MessageController],
   exports: [PostService, FriendshipService, MessageService],
 })
-export class SocialModule {}
+export class SocialModule { }

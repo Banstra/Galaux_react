@@ -10,27 +10,30 @@ import {
   BadRequestException,
   UnauthorizedException,
   Delete,
+  DefaultValuePipe,
+  ParseIntPipe,
+  Query,
 } from '@nestjs/common';
-import { FriendshipService } from './friendship.service';
+import { FriendshipService } from '../service/friendship.service';
 import {
-  FriendshipActionDto,
   UpdateFriendshipDto,
-} from './FriendshipAction.dto';
+} from '../dto/UpdateFriendship.dto';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOkResponse, ApiParam, ApiQuery } from '@nestjs/swagger';
+import { UserResponseDto } from '../../auth/dto/UserResponse.dto';
 @Controller('friendship')
 export class FriendshipController {
   constructor(private readonly friendshipsService: FriendshipService) { }
 
-  @Post('request')
+  @Post('request/:addresseeId')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  @ApiBody({
-    type: FriendshipActionDto,
-    description: 'Добавление в друзья'
-  })
-  async sendRequest(@Request() req: any, @Body() dto: FriendshipActionDto) {
-    return this.friendshipsService.sendRequest(req.user.id, dto.addressee_id);
+  @ApiParam({ name: 'addresseeId', description: 'ID пользователя, которому отправляем запрос', example: 2 })
+  async sendRequest(
+    @Request() req: any,
+    @Param('addresseeId', ParseIntPipe) addresseeId: number,
+  ) {
+    return this.friendshipsService.sendRequest(req.user.id, addresseeId);
   }
 
   @Patch(':requesterId/respond')
@@ -72,7 +75,14 @@ export class FriendshipController {
   @Get('my-friends')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('access-token')
-  async getFriends(@Request() req: any) {
-    return this.friendshipsService.getFriends(req.user.id);
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, example: 20 })
+  @ApiOkResponse({ type: [UserResponseDto] })
+  async getFriends(
+    @Request() req: any,
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
+  ) {
+    return this.friendshipsService.getFriends(req.user.id, page, limit);
   }
 }

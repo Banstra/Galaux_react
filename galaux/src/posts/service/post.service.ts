@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreatePostDto } from './CreatePost.dto';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { CreatePostDto } from '../dto/CreatePost.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LikeEntity } from '../../typeorm/entities/Like.entity';
 import { PostEntity } from '../../typeorm/entities/Post.entity';
 import { UserEntity } from '../../typeorm/entities/User.entity';
+import { UpdatePostDto } from '../dto/UpdatePost.dto';
 
 @Injectable()
 export class PostService {
@@ -15,18 +16,14 @@ export class PostService {
     private likeRepo: Repository<LikeEntity>,
     @InjectRepository(UserEntity)
     private userRepo: Repository<UserEntity>,
-  ) {}
+  ) { }
 
   async createPost(userId: number, createPostDto: CreatePostDto) {
-    // 1. Fetch the user
-    const author = await this.userRepo.findOne({ where: { id: userId } });
 
-    // 2. Check if author is null and throw a 404 error if they don't exist
+    const author = await this.userRepo.findOne({ where: { id: userId } });
     if (!author) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
-
-    // 3. Now TypeScript knows `author` is definitely a UserEntity, so no more TS2769 error!
     const post = this.postRepo.create({
       ...createPostDto,
       author,
@@ -36,8 +33,7 @@ export class PostService {
   }
 
   async getFeed(page = 1, limit = 20) {
-    // Using QueryBuilder to efficiently join author and like counts
-    return this.postRepo
+    const { entities, raw } = await this.postRepo
       .createQueryBuilder('post')
       .leftJoinAndSelect('post.author', 'author')
       .leftJoin('post.likes', 'like')
@@ -47,9 +43,17 @@ export class PostService {
       .take(limit)
       .groupBy('post.id, author.id')
       .getRawAndEntities();
+
+    return entities.map((post, index) => ({
+      ...post,
+      likes_count: Number(raw[index]?.likes_count) || 0,
+    }));
   }
 
   async toggleLike(userId: number, postId: number) {
+    const post = await this.postRepo.findOne({ where: { id: postId } });
+    if (!post) throw new NotFoundException('Post not found');
+
     const existingLike = await this.likeRepo.findOne({
       where: { user: { id: userId }, post: { id: postId } },
     });
@@ -65,5 +69,41 @@ export class PostService {
     });
     await this.likeRepo.save(like);
     return { liked: true, message: 'Post liked' };
+  }
+
+  async updatePost(userId: number, postId: number, updatePostDto: UpdatePostDto) {
+    const post = await this.postRepo.findOne({
+      where: { id: postId },
+      relations: { author: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (post.author.id !== userId) {
+      throw new ForbiddenException('You can only edit your own posts');
+    }
+
+    Object.assign(post, updatePostDto);
+    return this.postRepo.save(post);
+  }
+
+  async deletePost(userId: number, postId: number) {
+    const post = await this.postRepo.findOne({
+      where: { id: postId },
+      relations: { author: true },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (post.author.id !== userId) {
+      throw new ForbiddenException('You can only delete your own posts');
+    }
+
+    await this.postRepo.remove(post);
+    return { message: 'Post deleted successfully' };
   }
 }
