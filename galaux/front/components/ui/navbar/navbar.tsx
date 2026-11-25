@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState } from 'react'; // Уберите useEffect!
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store/useAuthStore';
@@ -12,7 +12,7 @@ const NAV = [
   { label: 'Цены', href: '/pricing' },
 ];
 
-export function Navbar() {
+export default function Navbar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
@@ -27,7 +27,7 @@ export function Navbar() {
     router.push('/');
   }
 
-  // Единый блок рендера: на сервере всегда "не авторизован", на клиенте — реальное состояние
+  // Единый блок рендера без дублирования разметки
   return (
     <header className="sticky top-0 z-50">
       <div className="glass border-x-0 border-t-0">
@@ -51,15 +51,13 @@ export function Navbar() {
             ))}
           </nav>
 
-          {/*
-            Ключевой момент: пока !isMounted (сервер), мы рендерим ТОЧНО тот же HTML,
-            который был бы при отсутствии пользователя.
-            Как только компонент оживает на клиенте, Zustand уже содержит данные из localStorage,
-            и UI мгновенно переключается на авторизованный вид БЕЗ ошибки гидратации.
-          */}
+          {/* Сервер всегда рендерит эту ветку → нет мисматча */}
           {!isMounted ? (
             <div className="flex items-center gap-3">
-              <Link href="/auth/login" className="btn-neon !px-4 !py-2 text-sm">
+              <Link
+                href="/auth/login"
+                className="btn-ghost !px-4 !py-2 text-sm"
+              >
                 Войти
               </Link>
               <Link

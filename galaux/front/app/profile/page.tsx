@@ -6,6 +6,8 @@ import {
   Camera,
   Heart,
   ImageOff,
+  Link,
+  Loader2,
   MessageCircle,
   Pencil,
   Send,
@@ -16,6 +18,7 @@ import {
 } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
+import ConfirmModal from '../_components/ConfirmModal';
 
 /* ---------- типы ---------- */
 type Profile = {
@@ -82,6 +85,11 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [removingFriendId, setRemovingFriendId] = useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{
+    id: number;
+    type: 'friend' | 'post';
+  } | null>(null);
   const [tab, setTab] = useState<'posts' | 'friends' | 'projects'>('posts');
   const [draft, setDraft] = useState('');
   const [publishing, setPublishing] = useState(false);
@@ -133,6 +141,20 @@ export default function ProfilePage() {
     } catch {}
   }
 
+  async function handleRemoveFriend(friendId: number) {
+    setConfirmDelete({ id: friendId, type: 'friend' });
+
+    setRemovingFriendId(friendId);
+    try {
+      await fetchAPI(`/friendship/${friendId}`, { method: 'DELETE' });
+      setFriends((prev) => prev.filter((f) => f.id !== friendId));
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRemovingFriendId(null);
+    }
+  }
+
   /* публикация */
   async function publish() {
     if (!draft.trim() || publishing) return;
@@ -151,7 +173,6 @@ export default function ProfilePage() {
 
   return (
     <div className="relative min-h-dvh">
-
       {/* ===== Обложка (была «шахматкой» → градиент + сетка) ===== */}
       <section className="relative h-44 overflow-hidden border-b border-white/10 bg-gradient-to-r from-deep via-abyss to-void md:h-56">
         <div className="absolute inset-0 bg-grid opacity-70" />
@@ -308,29 +329,51 @@ export default function ProfilePage() {
               friends.map((f) => (
                 <div
                   key={f.id}
-                  className="glass card-hover flex items-center gap-4 rounded-2xl p-5"
+                  className="glass card-hover flex items-center gap-4 rounded-2xl p-5 group"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-neon/40 to-grape/40 font-display text-lg text-white">
+                  <Link
+                    href={`/profile/${f.id}`}
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-neon/40 to-grape/40 font-display text-lg text-white transition-transform group-hover:scale-105"
+                  >
                     {f.username[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-slate-100">
+                  </Link>
+                  <div className="flex-1 min-w-0">
+                    <Link
+                      href={`/profile/${f.id}`}
+                      className="font-semibold text-slate-100 truncate block hover:text-neon transition-colors"
+                    >
                       {f.username}
-                    </div>
+                    </Link>
                     <div className="text-xs text-slate-500">в друзьях</div>
                   </div>
-                  <MessageCircle
-                    size={18}
-                    className="text-slate-500 transition hover:text-neon"
-                  />
+                  <div className="flex gap-2">
+                    <Link
+                      href={`/profile/${f.id}`}
+                      className="btn-ghost !p-2.5"
+                    >
+                      <MessageCircle size={16} />
+                    </Link>
+                    <button
+                      onClick={() => handleRemoveFriend(f.id)}
+                      disabled={removingFriendId === f.id}
+                      className="btn-ghost !p-2.5 text-slate-500 hover:text-coral hover:border-coral/30 disabled:opacity-50"
+                      title="Удалить из друзей"
+                    >
+                      {removingFriendId === f.id ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <X size={16} />
+                      )}
+                    </button>
+                  </div>
                 </div>
               ))
             ) : (
               <div className="glass col-span-full flex flex-col items-center rounded-2xl p-12 text-center">
-                <Users className="text-slate-600" size={36} />
-                <p className="mt-4 text-sm text-slate-400">
-                  Пока нет друзей. Добавьте игроков по ID через{' '}
-                  <code className="text-ice">POST /friendship/request</code>.
+                <Users className="text-slate-600 mb-4" size={36} />
+                <p className="text-sm text-slate-400">Пока нет друзей.</p>
+                <p className="text-xs text-slate-500 mt-2">
+                  Найдите игроков через поиск или ленту новостей
                 </p>
               </div>
             )}
@@ -363,6 +406,27 @@ export default function ProfilePage() {
         />
       )}
 
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title={
+          confirmDelete?.type === 'friend'
+            ? 'Удалить из друзей?'
+            : 'Удалить пост?'
+        }
+        message={
+          confirmDelete?.type === 'friend'
+            ? 'Это действие нельзя отменить. Пользователь будет удалён из вашего списка друзей.'
+            : 'Пост будет безвозвратно удалён из ленты.'
+        }
+        onConfirm={() => {
+          if (confirmDelete?.type === 'friend')
+            handleRemoveFriend(confirmDelete.id);
+          // ... обработка других типов
+          setConfirmDelete(null);
+        }}
+        onCancel={() => setConfirmDelete(null)}
+        confirmText="Удалить"
+      />
     </div>
   );
 }
