@@ -18,7 +18,7 @@ export type Post = {
   content: string;
   image_url?: string | null;
   likes?: number;
-  comments_count?: number;
+  comments?: number;
   liked?: boolean;
   author: { id: number; username: string; displayName?: string | null };
   created_at: string;
@@ -40,7 +40,7 @@ function timeAgo(iso: string) {
   return `${Math.floor(h / 24)} дн назад`;
 }
 
-export default function PostCard({
+export function PostCard({
   post,
   currentUser,
   onLike,
@@ -165,7 +165,7 @@ export default function PostCard({
         </button>
 
         <span className="flex items-center gap-2">
-          <MessageCircle size={16} /> {post.comments_count ?? 0}
+          <MessageCircle size={16} /> {post.comments ?? 0}
         </span>
 
         <button className="ml-auto transition hover:text-neon">
@@ -176,7 +176,7 @@ export default function PostCard({
       {/* Встроенная секция комментариев */}
       <CommentSection
         postId={post.id}
-        initialCount={post.comments_count ?? 0}
+        initialCount={post.comments ?? 0}
       />
     </article>
   );

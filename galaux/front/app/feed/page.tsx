@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { fetchAPI } from '@/lib/api';
 import { useAuthStore } from '@/lib/store/useAuthStore';
-import PostCard, { Post } from '@/app/_components/PostCard';
+import { Post, PostCard } from '@/app/_components/PostCard';
 import { Friend } from '@/app/profile/page';
 
 function timeAgo(iso: string) {

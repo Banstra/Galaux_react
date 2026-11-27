@@ -30,6 +30,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         database: configService.get('DATABASE_NAME'),
         entities: [__dirname + '/typeorm/entities/**'],
         synchronize: true,
+        extra: {
+          connectionLimit: 10, // Максимум одновременных соединений
+          connectTimeout: 10000, // Таймаут подключения 10с вместо дефолтных 40с
+        },
+        logging: process.env.NODE_ENV === 'development', // Логи только в dev
       }),
       inject: [ConfigService]
     }),
