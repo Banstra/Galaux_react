@@ -1,27 +1,24 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans, Playfair_Display } from "next/font/google";
-import "./globals.css";
-import { Navbar } from '@/components/ui/navbar/navbar';
-import { cn } from "@/lib/utils";
+import type { Metadata } from 'next';
+import './globals.css';
+import Navbar from '@/components/ui/navbar/navbar';
 import { Footer } from '@/components/ui/footer/footer';
 
-
 export const metadata: Metadata = {
-  title: "Galaux",
-  description: "Minecraft app",
+  title: 'Galaux',
+  description: 'Minecraft app',
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <body className="min-h-screen w-screen m-0 rounded-none flex flex-col overflow-x-hidden overflow-y-auto">
-        <header>
-          <Navbar></Navbar>
-        </header>
-        <main className="h-screen max-w-screen">{children}</main>
-        <footer>
-          <Footer></Footer>
-        </footer>
+        <Navbar />
+        <main className="relative overflow-hidden flex-1">{children}</main>
+        <Footer />
       </body>
     </html>
   );
